@@ -1,0 +1,42 @@
+name: cd
+
+on: 
+  workflow_dispatch:
+
+env:
+  HELM_EXPERIMENTAL_OCI: 1
+  HELM_VERSION_TO_INSTALL: 3.4.1
+  ACR_NAME: acrshobhitdemo
+  ACR_REPO_NAME: helm/prtesting
+  AKS_NAME: aksclusterdemo
+jobs:
+  build:
+    name: publish acr
+    runs-on: ubuntu-latest
+    steps:
+      - name: login to azure 
+                # login to Azure, the service principal needs at least
+                # Azure Kubernetes Server Cluster User Role
+        run: |
+          az login --service-principal -u ${{ secrets.REGISTRY_USERNAME }} -p ${{ secrets.REGISTRY_PASSWORD }}  --tenant ${{ secrets.AZURE_TENANT_ID }}
+          az aks get-credentials -n ${{ env.AKS_NAME }} -g ${{ secrets.RESOURCE_GROUP }} --admin
+      - name: login to acr
+        run: |
+         export HELM_EXPERIMENTAL_OCI=1
+          # Helm Login to ACR
+          echo '${{ secrets.REGISTRY_PASSWORD }}' | helm registry login ${{ env.ACR_NAME }}.azurecr.io --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin 
+      - name: Pull helm chart
+        run: |
+         helm chart pull ${{ env.ACR_NAME }}.azurecr.io/${{ env.ACR_REPO_NAME }}:latest
+         helm chart export ${{ env.ACR_NAME }}.azurecr.io/${{ env.ACR_REPO_NAME }}:latest
+
+      - name: save helm chart to local registry
+        run: |
+          helm upgrade myversion101 ./prtestingchart \
+            --namespace mynamespace \
+            --create-namespace \
+            --install \
+            --wait \
+            --set image.repository=${{ secrets.REGISTRY_LOGIN_SERVER }}/microservicetest \
+            --set image.tag=myversion101 \
+            --set replicaCount=1

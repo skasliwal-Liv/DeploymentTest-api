@@ -1,0 +1,86 @@
+name: .NET
+on:
+  workflow_dispatch:
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
+env:
+  APP_NAME: mymicroservice
+  ACR_HELM_REPO_NAME: helm/apptemplate
+  ACR_HELM_CHART_NAME: apptemplate
+  AKS_NAME: aksclusterdemo
+  HOST_URL: pr-review.liventuspoc.com
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+     # checkout the repo
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v2
+    - name: 'get short sha - version tag'
+      id: vars
+      run: |
+         echo ::set-output name=version_tag::$(git rev-parse --short=7 ${{ github.sha }})
+         echo  Version-${{ steps.vars.outputs.version_tag }}
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: 'Build and push Docker image locally'
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+    - run: |
+        docker build . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{env.APP_NAME}}:${{ steps.vars.outputs.version_tag }}
+        docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{env.APP_NAME}}:${{ steps.vars.outputs.version_tag }}
+
+    - name: 'Publish App Image to ACR'
+      uses: 'azure/aci-deploy@v1'
+      with:
+        resource-group: ${{ secrets.RESOURCE_GROUP }}
+        dns-name-label: ${{ secrets.RESOURCE_GROUP }}${{ github.run_number }}
+        image: ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{env.APP_NAME}}:${{ steps.vars.outputs.version_tag }}
+        registry-login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+        registry-username: ${{ secrets.REGISTRY_USERNAME }}
+        registry-password: ${{ secrets.REGISTRY_PASSWORD }}
+        name: aci-${{env.APP_NAME}}
+        location: 'East US 2'
+
+    - name: Pull HELM chart
+      run: |
+         export HELM_EXPERIMENTAL_OCI=1
+          # Helm Login to ACR
+         echo '${{ secrets.REGISTRY_PASSWORD }}' | helm registry login ${{ secrets.REGISTRY_LOGIN_SERVER }} --username ${{ secrets.REGISTRY_USERNAME }} --password-stdin 
+         helm chart pull ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.ACR_HELM_REPO_NAME }}:latest
+         helm chart export ${{ secrets.REGISTRY_LOGIN_SERVER }}/${{ env.ACR_HELM_REPO_NAME }}:latest
+    
+    - name: Login to AKS
+      run: |
+          az aks get-credentials -n ${{ env.AKS_NAME }} -g ${{ secrets.RESOURCE_GROUP }} --admin
+     
+    - name: publish to AKS
+      run: |
+          helm upgrade pr-${{env.APP_NAME}}-${{ steps.vars.outputs.version_tag }} ./${{env.ACR_HELM_CHART_NAME}} \
+            --namespace pr-${{env.APP_NAME}}-${{ steps.vars.outputs.version_tag }} \
+            --create-namespace \
+            --install \
+            --wait \
+            --set image.repository=${{ secrets.REGISTRY_LOGIN_SERVER }}/${{env.APP_NAME}} \
+            --set image.tag=${{ steps.vars.outputs.version_tag }} \
+            --set replicaCount=1  \
+            --set ingress.hosts[0].host=${{ steps.vars.outputs.version_tag }}.${{env.HOST_URL}}  \
+            --set ingress.hosts[0].paths[0].path=/  \
+            --set ingress.hosts[0].paths[0].pathType=Prefix \
+            --set ingress.tls[0].hosts[0]=${{ steps.vars.outputs.version_tag }}.${{env.HOST_URL}}  \
+            --set ingress.tls[0].secretName=tls-secret \
+            --set ingress.annotations."kubernetes\.io/ingress\.class"=nginx \
+            --set ingress.annotations."cert-manager\.io/cluster-issuer"=letsencrypt-production \
+            --set ingress.annotations."nginx\.ingress\.kubernetes\.io/rewrite-target"=$1 \
+            --set-string ingress.annotations."nginx\.ingress\.kubernetes\.io/use-regex"="true"
