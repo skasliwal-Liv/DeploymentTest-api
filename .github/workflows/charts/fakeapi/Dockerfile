@@ -10,3 +10,6 @@ EXPOSE 4301
 ADD run.sh /run.sh
 ENTRYPOINT ["bash", "/run.sh"]
 CMD []
+
+#https://www.npmjs.com/package/the-fake-backend
+#https://github.com/kengu/json-server-deployment
