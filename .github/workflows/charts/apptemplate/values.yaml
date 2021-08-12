@@ -18,6 +18,12 @@ readinessProbe:
   enabled: true
   path: /hc
 
+volumeMounts:
+  enabled: false
+
+volumes:
+  enabled: false
+
 imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
