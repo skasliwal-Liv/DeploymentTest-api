@@ -18,11 +18,20 @@ readinessProbe:
   enabled: true
   path: /hc
 
-volumeMounts:
+volumesAndMounts:
   enabled: false
-
-volumes:
-  enabled: false
+  volumes:
+    - name: mount-0
+      hostPath:
+        path: /tmp
+    - name: mount-1
+      hostPath:
+        path: /tmp
+  volumesMounts:
+    - mountPath: /a
+      name: mount-0
+    - mountPath: /b
+      name: mount-1
 
 imagePullSecrets: []
 nameOverride: ""
