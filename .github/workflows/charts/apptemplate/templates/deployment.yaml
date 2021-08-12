@@ -40,6 +40,8 @@ spec:
           {{- if .Values.volumeMounts.enabled }}
           volumeMounts:  
                {{- range .Values.volumeMounts.Values }}  
+            - {{ . | quote }}
+               {{- end }}
           {{- end }}  
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
@@ -57,7 +59,9 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- if .Values.volumeMounts.enabled }}
       volumes:  
-               {{- range .Values.volumes.Values }}  
+          {{- range .Values.volumes.Values }}
+        - {{ . | quote }}
+          {{- end }}
       {{- end }} 
       {{- with .Values.nodeSelector }}
       nodeSelector:
