@@ -37,10 +37,10 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
-          {{- if .Values.volumeMounts.enabled }}
+          {{- if .Values.volumesAndMounts.enabled }}
           volumeMounts:  
-               {{- range .Values.volumeMounts.Values }}  
-            - {{ . | quote }}
+               {{- range .Values.volumesAndMounts.volumesMounts }}
+            - {{- . | toYaml | nindent 10 -}}
                {{- end }}
           {{- end }}  
           {{- if .Values.livenessProbe.enabled }}
@@ -57,10 +57,10 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if .Values.volumeMounts.enabled }}
+      {{- if .Values.volumesAndMounts.enabled }}
       volumes:  
-          {{- range .Values.volumes.Values }}
-        - {{ . | quote }}
+          {{- range .Values.volumesAndMounts.volumes }}
+        - {{ . | toYaml | nindent 6 -}}
           {{- end }}
       {{- end }} 
       {{- with .Values.nodeSelector }}
