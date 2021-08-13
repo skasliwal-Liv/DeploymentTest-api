@@ -6,7 +6,7 @@ RUN npm install -g json-server
 WORKDIR /fakeapi-data
 VOLUME /fakeapi-data
 
-EXPOSE 4301
+EXPOSE 80
 ADD run.sh /run.sh
 ENTRYPOINT ["bash", "/run.sh"]
 CMD []
