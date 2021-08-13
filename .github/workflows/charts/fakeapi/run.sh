@@ -2,7 +2,7 @@
 
 args="$@"
 
-args="$@ -p 4301"
+args="$@ -p 80"
 
 file=/fakeapi-data/db.json
 if [ -f $file ]; then
