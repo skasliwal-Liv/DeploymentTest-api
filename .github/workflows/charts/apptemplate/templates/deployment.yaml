@@ -38,10 +38,10 @@ spec:
               containerPort: 80
               protocol: TCP
           {{- if .Values.volumesAndMounts.enabled }}
-          volumeMounts:  
-               {{- range .Values.volumesAndMounts.volumesMounts }}
+          volumeMounts:
+            {{- range .Values.volumesAndMounts.volumesMounts }}
             - {{- . | toYaml | nindent 10 -}}
-               {{- end }}
+            {{- end }}
           {{- end }}  
           {{- if .Values.livenessProbe.enabled }}
           livenessProbe:
@@ -59,9 +59,9 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- if .Values.volumesAndMounts.enabled }}
       volumes:  
-          {{- range .Values.volumesAndMounts.volumes }}
-        - {{ . | toYaml | nindent 6 -}}
-          {{- end }}
+         {{- range .Values.volumesAndMounts.volumes }}
+         - {{ . | toYaml | nindent 6 -}}
+         {{- end }}
       {{- end }} 
       {{- with .Values.nodeSelector }}
       nodeSelector:
